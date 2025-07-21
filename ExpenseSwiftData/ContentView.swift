@@ -104,3 +104,21 @@ struct AddExpenseSheet: View {
     }
 }
 
+struct UpdateExpenseSheet: View {
+
+    @Bindable var expense: Expense
+    @Environment(\ .dismiss) var dismiss
+
+    var body: some View {
+        NavigationStack{
+            
+            Form {
+                TextField("Expense Name", text: $expense.name )
+                DatePicker("Date", selection: $expense.date)
+                TextField("Amount",value: $expense.value, format: .currency(code: "USD"))
+                    .keyboardType(.decimalPad)
+            }
+        }
+    }
+}
+
