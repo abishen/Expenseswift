@@ -25,7 +25,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("Expenses")
+            .navigationTitle("Expenses : £\(String(format: "%.2f",expenses.map({$0.value}).reduce(0.00,+)))")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $isExpanded) { AddExpenseSheet()}
             .toolbar {
