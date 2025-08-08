@@ -7,7 +7,7 @@
 
 import SwiftUI
 import SwiftData
-
+import Charts
 struct ContentView: View {
     @State private var isExpanded = false
     @Environment(\.modelContext) private var context
@@ -49,6 +49,25 @@ struct ContentView: View {
                 }
             }
         }
+
+        Chart(expenses){ expense in
+            SectorMark(
+                angle: .value(
+                    Text(verbatim: expense.name),
+                    expense.value
+                )
+            )
+            .foregroundStyle(
+                by: .value(
+                    Text(verbatim: expense.name),
+                    expense.name
+                )
+            )
+            
+        }
+        .frame(width: UIScreen.main.bounds.width, height: 150)
+        Spacer()
+        
     }
 }
 
@@ -63,7 +82,7 @@ struct ExpenseCell: View {
                 .frame(width: 70, alignment: .leading)
             Text(expense.name)
             Spacer()
-            Text(expense.value, format: .currency(code: "USD"))
+            Text(expense.value, format: .currency(code: "GBP"))
         }
        
     }
@@ -80,7 +99,7 @@ struct AddExpenseSheet: View {
             Form {
                 TextField("Expense Name", text: $name )
                 DatePicker("Date", selection: $date)
-                TextField("Amount",value: $amount, format: .currency(code: "USD"))
+                TextField("Amount",value: $amount, format: .currency(code: "GBP"))
                     .keyboardType(.decimalPad)
             }
             .navigationTitle("New Expense")
@@ -115,7 +134,7 @@ struct UpdateExpenseSheet: View {
             Form {
                 TextField("Expense Name", text: $expense.name )
                 DatePicker("Date", selection: $expense.date)
-                TextField("Amount",value: $expense.value, format: .currency(code: "USD"))
+                TextField("Amount",value: $expense.value, format: .currency(code: "GBP"))
                     .keyboardType(.decimalPad)
             }
         }
