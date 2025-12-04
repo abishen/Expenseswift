@@ -8,136 +8,94 @@
 import SwiftUI
 import SwiftData
 import Charts
+
 struct ContentView: View {
-    @State private var isExpanded = false
+    @StateObject private var viewModel = ExpenseListViewModel()
+
+    @State private var isPresentingAdd = false
+
     @Environment(\.modelContext) private var context
-    @Query(sort: \Expense.date) var expenses: [Expense]
+    @Query(sort: \Expense.date) private var expenses: [Expense]
+
     var body: some View {
-        NavigationStack{
-            List{
+        NavigationStack {
+            List {
                 ForEach(expenses) { expense in
                     ExpenseCell(expense: expense)
-                    
                 }
                 .onDelete { indexSet in
-                    for index in indexSet {
-                        context.delete(expenses[index])
+                    // Use the same source of truth as the List (@Query) to determine deletions
+                    let toDelete = indexSet.compactMap { idx in
+                        expenses.indices.contains(idx) ? expenses[idx] : nil
                     }
+                    toDelete.forEach { context.delete($0) }
                 }
             }
-            .navigationTitle("Expenses : £\(String(format: "%.2f",expenses.map({$0.value}).reduce(0.00,+)))")
+            .navigationTitle("Expenses : £\(viewModel.totalFormatted)")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $isExpanded) { AddExpenseSheet()}
+            .sheet(isPresented: $isPresentingAdd) {
+                AddExpenseSheet()
+            }
             .toolbar {
-                if !expenses.isEmpty {
+                if !viewModel.isEmpty {
                     Button("Add Expense", systemImage: "plus") {
-                        isExpanded = true
+                        isPresentingAdd = true
                     }
                 }
             }
             .overlay {
-                if expenses.isEmpty {
-                    ContentUnavailableView(label: {
-                        Label("No Expenses", systemImage: "list.bullet.rectangle.portrait")
-                    }, description: {
-                        Text("Add your first expense.")
-                    }, actions: {
-                        Button("Add Expense") {
-                            isExpanded = true
-                        }
-                    }).offset(y: -60)
+                if viewModel.isEmpty {
+                    EmptyExpensesView {
+                        isPresentingAdd = true
+                    }
+                    .offset(y: -60)
                 }
+            }
+            // Keep the ViewModel in sync with SwiftData query results
+            .onAppear {
+                viewModel.update(expenses: expenses)
+            }
+            .onChange(of: expenses) { _, newValue in
+                viewModel.update(expenses: newValue)
             }
         }
 
-        Chart(expenses){ expense in
+        ExpensesChartView(slices: viewModel.chartSlices)
+            .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+    }
+}
+
+private struct ExpensesChartView: View {
+    let slices: [(name: String, value: Double)]
+
+    var body: some View {
+        Chart(slices, id: \.name) { slice in
             SectorMark(
-                angle: .value(
-                    Text(verbatim: expense.name),
-                    expense.value
-                )
+                angle: .value(Text(verbatim: slice.name), slice.value)
             )
-            .foregroundStyle(
-                by: .value(
-                    Text(verbatim: expense.name),
-                    expense.name
-                )
-            )
-            
+            .foregroundStyle(by: .value(Text(verbatim: slice.name), slice.name))
         }
-        .frame(width: UIScreen.main.bounds.width, height: 150)
-        Spacer()
-        
+    }
+}
+
+private struct EmptyExpensesView: View {
+    var onAdd: () -> Void
+
+    var body: some View {
+        ContentUnavailableView(
+            label: {
+                Label("No Expenses", systemImage: "list.bullet.rectangle.portrait")
+            },
+            description: {
+                Text("Add your first expense.")
+            },
+            actions: {
+                Button("Add Expense", action: onAdd)
+            }
+        )
     }
 }
 
 #Preview {
     ContentView()
 }
-struct ExpenseCell: View {
-    var expense: Expense
-    var body: some View {
-        HStack{
-            Text(expense.date, format: .dateTime.month(.abbreviated).day())
-                .frame(width: 70, alignment: .leading)
-            Text(expense.name)
-            Spacer()
-            Text(expense.value, format: .currency(code: "GBP"))
-        }
-       
-    }
-}
-struct AddExpenseSheet: View {
-    @Environment(\.modelContext) var context
-    @Environment(\ .dismiss) var dismiss
-    @State var name: String = ""
-    @State var date :Date = .now
-    @State var amount: Double = 0
-    var body: some View {
-        NavigationStack{
-            
-            Form {
-                TextField("Expense Name", text: $name )
-                DatePicker("Date", selection: $date)
-                TextField("Amount",value: $amount, format: .currency(code: "GBP"))
-                    .keyboardType(.decimalPad)
-            }
-            .navigationTitle("New Expense")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItemGroup (placement:.topBarLeading){
-                    Button("Cancel"){
-                        dismiss()
-                    }
-                }
-                ToolbarItemGroup (placement: .topBarTrailing){
-                    Button("Save"){
-                        let expense = Expense(name: name, date: date, value: amount)
-                        context.insert(expense)
-                        dismiss()
-                    }
-                }
-            }
-            
-        }
-    }
-}
-
-struct UpdateExpenseSheet: View {
-
-    @Bindable var expense: Expense
-    @Environment(\ .dismiss) var dismiss
-
-    var body: some View {
-        NavigationStack{
-            
-            Form {
-                TextField("Expense Name", text: $expense.name )
-                DatePicker("Date", selection: $expense.date)
-                TextField("Amount",value: $expense.value, format: .currency(code: "GBP"))
-                    .keyboardType(.decimalPad)
-            }
-        }
-    }
-}
-
