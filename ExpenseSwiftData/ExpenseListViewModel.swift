@@ -27,6 +27,11 @@ final class ExpenseListViewModel: ObservableObject {
         formatter.currencyCode = currencyCode
         return formatter
     }()
+    
+    // Pre-formatted zero fallback value
+    private lazy var formattedZero: String = {
+        currencyFormatter.string(from: NSNumber(value: 0.0)) ?? "0.00"
+    }()
 
     func update(expenses: [Expense]) {
         self.expenses = expenses
@@ -48,8 +53,7 @@ final class ExpenseListViewModel: ObservableObject {
 
         // Use reduce directly without intermediate map for better performance
         let total = expenses.reduce(0.0) { $0 + $1.value }
-        // Fallback to plain number format (formatter should not return nil for valid NSNumber)
-        totalFormatted = currencyFormatter.string(from: NSNumber(value: total)) ?? "0.00"
+        totalFormatted = currencyFormatter.string(from: NSNumber(value: total)) ?? formattedZero
 
         chartSlices = expenses.map { ($0.name, $0.value) }
     }
