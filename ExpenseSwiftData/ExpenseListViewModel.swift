@@ -48,6 +48,7 @@ final class ExpenseListViewModel: ObservableObject {
 
         // Use reduce directly without intermediate map for better performance
         let total = expenses.reduce(0.0) { $0 + $1.value }
+        // Fallback to plain number format (formatter should not return nil for valid NSNumber)
         totalFormatted = currencyFormatter.string(from: NSNumber(value: total)) ?? "0.00"
 
         // Map is already optimized by the compiler and reserves capacity internally
