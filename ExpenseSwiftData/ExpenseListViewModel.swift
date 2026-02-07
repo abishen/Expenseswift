@@ -25,12 +25,13 @@ final class ExpenseListViewModel: ObservableObject {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = currencyCode
+        formatter.locale = Locale(identifier: "en_GB") // Consistent locale for GBP
         return formatter
     }()
     
-    // Pre-formatted zero fallback value
+    // Pre-formatted zero fallback value (includes currency symbol)
     private lazy var formattedZero: String = {
-        currencyFormatter.string(from: NSNumber(value: 0.0)) ?? "0.00"
+        currencyFormatter.string(from: NSNumber(value: 0.0)) ?? "£0.00"
     }()
 
     func update(expenses: [Expense]) {
