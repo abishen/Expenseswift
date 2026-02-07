@@ -23,15 +23,12 @@ final class ExpenseListViewModel: ObservableObject {
     // Reusable formatter to avoid creating new instances on every computation
     private lazy var currencyFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currencyCode
         return formatter
     }()
 
     func update(expenses: [Expense]) {
-        // Avoid unnecessary recomputation if expenses haven't changed
-        guard self.expenses != expenses else { return }
         self.expenses = expenses
         recompute()
     }

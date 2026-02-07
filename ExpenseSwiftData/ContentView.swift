@@ -52,7 +52,6 @@ struct ContentView: View {
                 }
             }
             // Keep the ViewModel in sync with SwiftData query results
-            // Both onAppear and onChange are needed - guard in update() prevents duplicate work
             .onAppear {
                 viewModel.update(expenses: expenses)
             }
