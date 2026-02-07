@@ -20,3 +20,12 @@ class Expense {
         self.value = value
     }
 }
+
+// Equatable conformance for efficient comparison
+extension Expense: Equatable {
+    static func == (lhs: Expense, rhs: Expense) -> Bool {
+        lhs.name == rhs.name && 
+        lhs.date == rhs.date && 
+        lhs.value == rhs.value
+    }
+}
