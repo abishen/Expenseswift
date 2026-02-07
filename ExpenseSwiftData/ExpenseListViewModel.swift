@@ -51,7 +51,6 @@ final class ExpenseListViewModel: ObservableObject {
         // Fallback to plain number format (formatter should not return nil for valid NSNumber)
         totalFormatted = currencyFormatter.string(from: NSNumber(value: total)) ?? "0.00"
 
-        // Map is already optimized by the compiler and reserves capacity internally
         chartSlices = expenses.map { ($0.name, $0.value) }
     }
 }
