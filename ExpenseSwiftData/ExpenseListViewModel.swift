@@ -53,12 +53,7 @@ final class ExpenseListViewModel: ObservableObject {
         let total = expenses.reduce(0.0) { $0 + $1.value }
         totalFormatted = currencyFormatter.string(from: NSNumber(value: total)) ?? "0.00"
 
-        // Build chart slices more efficiently by reserving capacity
-        var slices: [(name: String, value: Double)] = []
-        slices.reserveCapacity(expenses.count)
-        for expense in expenses {
-            slices.append((expense.name, expense.value))
-        }
-        chartSlices = slices
+        // Map is already optimized by the compiler and reserves capacity internally
+        chartSlices = expenses.map { ($0.name, $0.value) }
     }
 }

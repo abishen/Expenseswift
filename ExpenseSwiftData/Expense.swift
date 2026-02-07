@@ -22,10 +22,9 @@ class Expense {
 }
 
 // Equatable conformance for efficient comparison
+// Using object identity for SwiftData models
 extension Expense: Equatable {
     static func == (lhs: Expense, rhs: Expense) -> Bool {
-        lhs.name == rhs.name && 
-        lhs.date == rhs.date && 
-        lhs.value == rhs.value
+        lhs === rhs
     }
 }
