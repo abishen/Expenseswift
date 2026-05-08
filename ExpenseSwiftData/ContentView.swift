@@ -57,7 +57,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("Expenses : £\(viewModel.totalFormatted)")
+            .navigationTitle("Expenses : \(viewModel.totalFormatted)")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $isPresentingAdd) {
                 AddExpenseSheet()
