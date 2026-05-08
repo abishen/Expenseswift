@@ -13,28 +13,57 @@ struct ContentView: View {
     @StateObject private var viewModel = ExpenseListViewModel()
 
     @State private var isPresentingAdd = false
+    @State private var selectedExpense: Expense?
 
     @Environment(\.modelContext) private var context
     @Query(sort: \Expense.date) private var expenses: [Expense]
+    
+
+    private var groupedExpenses: [(key: Date, values: [Expense])] {
+        let groups = Dictionary(grouping: expenses) { expense in
+            Calendar.current.startOfDay(for: expense.date)
+        }
+        return groups
+            .map { (key: $0.key, values: $0.value) }
+            .sorted { $0.key > $1.key }
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(expenses) { expense in
-                    ExpenseCell(expense: expense)
-                }
-                .onDelete { indexSet in
-                    // Use the same source of truth as the List (@Query) to determine deletions
-                    let toDelete = indexSet.compactMap { idx in
-                        expenses.indices.contains(idx) ? expenses[idx] : nil
+                ForEach(groupedExpenses, id: \.key) { group in
+                    Section(header: Text(group.key, style: .date)) {
+                        ForEach(group.values) { expense in
+                            ExpenseCell(expense: expense)
+                                .swipeActions(edge: .leading) {
+                                    Button {
+                                        selectedExpense = expense
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
+                        }
+                        .onDelete { indexSet in
+                            // Map the indexSet (indices within the section) to the
+                            // actual Expense objects and delete them from the model
+                            let toDelete = indexSet.compactMap { idx in
+                                group.values.indices.contains(idx) ? group.values[idx] : nil
+                            }
+                            toDelete.forEach { context.delete($0) }
+                        }
                     }
-                    toDelete.forEach { context.delete($0) }
                 }
             }
             .navigationTitle("Expenses : £\(viewModel.totalFormatted)")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $isPresentingAdd) {
                 AddExpenseSheet()
+            }
+            // Sheet to edit an existing expense. UpdateExpenseSheet uses @Bindable
+            // so we can pass the model instance directly.
+            .sheet(item: $selectedExpense) { expense in
+                UpdateExpenseSheet(expense: expense)
             }
             .toolbar {
                 if !viewModel.isEmpty {
