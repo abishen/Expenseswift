@@ -17,6 +17,8 @@ struct ContentView: View {
 
     @Environment(\.modelContext) private var context
     @Query(sort: \Expense.date) private var expenses: [Expense]
+    @State private var isShowingShare = false
+    @State private var exportURL: URL?
     
 
     private var groupedExpenses: [(key: Date, values: [Expense])] {
@@ -65,10 +67,26 @@ struct ContentView: View {
             .sheet(item: $selectedExpense) { expense in
                 UpdateExpenseSheet(expense: expense)
             }
+            // CSV export share sheet
+            .sheet(isPresented: $isShowingShare) {
+                if let url = exportURL {
+                    ShareSheet(activityItems: [url])
+                } else {
+                    Text("Unable to prepare export")
+                }
+            }
             .toolbar {
                 if !viewModel.isEmpty {
-                    Button("Add Expense", systemImage: "plus") {
-                        isPresentingAdd = true
+                    HStack {
+                        Button("Add Expense", systemImage: "plus") {
+                            isPresentingAdd = true
+                        }
+                        Button("Export", systemImage: "square.and.arrow.up") {
+                            if let url = createCSV() {
+                                exportURL = url
+                                isShowingShare = true
+                            }
+                        }
                     }
                 }
             }
@@ -91,6 +109,36 @@ struct ContentView: View {
 
         ExpensesChartView(slices: viewModel.chartSlices)
             .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
+    }
+}
+
+// MARK: - CSV export
+extension ContentView {
+    private func createCSV() -> URL? {
+        let fm = FileManager.default
+        let tmpDir = fm.temporaryDirectory
+        let fileURL = tmpDir.appendingPathComponent("expenses_export_\(Int(Date().timeIntervalSince1970)).csv")
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+
+        var csv = "Date,Name,Amount\n"
+        for expense in expenses {
+            let date = dateFormatter.string(from: expense.date)
+            let name = expense.name.replacingOccurrences(of: "\"", with: "\"\"")
+            let amount = String(format: "%.2f", expense.value)
+            // Escape name with quotes if it contains comma
+            let safeName = name.contains(",") ? "\"\(name)\"" : name
+            csv += "\(date),\(safeName),\(amount)\n"
+        }
+
+        do {
+            try csv.write(to: fileURL, atomically: true, encoding: .utf8)
+            return fileURL
+        } catch {
+            print("Failed to write CSV: \(error)")
+            return nil
+        }
     }
 }
 
