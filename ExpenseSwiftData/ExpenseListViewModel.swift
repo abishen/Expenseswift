@@ -19,6 +19,19 @@ final class ExpenseListViewModel: ObservableObject {
 
     // Currency code could be made configurable later
     private let currencyCode = "GBP"
+    
+    // Reusable formatter to avoid creating new instances on every computation
+    private lazy var currencyFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currencyCode
+        return formatter
+    }()
+    
+    // Pre-formatted zero fallback value
+    private lazy var formattedZero: String = {
+        currencyFormatter.string(from: NSNumber(value: 0.0)) ?? "0.00"
+    }()
 
     func update(expenses: [Expense]) {
         self.expenses = expenses
@@ -38,8 +51,9 @@ final class ExpenseListViewModel: ObservableObject {
     private func recompute() {
         isEmpty = expenses.isEmpty
 
-        let total = expenses.map(\.value).reduce(0.0, +)
-        totalFormatted = String(format: "%.2f", total)
+        // Use reduce directly without intermediate map for better performance
+        let total = expenses.reduce(0.0) { $0 + $1.value }
+        totalFormatted = currencyFormatter.string(from: NSNumber(value: total)) ?? formattedZero
 
         chartSlices = expenses.map { ($0.name, $0.value) }
     }
