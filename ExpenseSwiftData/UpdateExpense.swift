@@ -60,9 +60,6 @@ struct UpdateExpenseSheet: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
-                        // Changes are auto-saved by SwiftData when the context is saved by the host view,
-                        // but dismissing here is fine. If you need explicit save, handle it in the caller.
-                        // Persist the selected image back to the model
                         expense.imageData = image?.jpegData(compressionQuality: 0.8)
                         dismiss()
                     }

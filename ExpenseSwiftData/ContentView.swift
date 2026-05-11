@@ -19,17 +19,24 @@ struct ContentView: View {
     @Query(sort: \Expense.date) private var expenses: [Expense]
     @State private var isShowingShare = false
     @State private var exportURL: URL?
+    @State private var selectedTab = 0
     
 
     // Grouping is now handled by the ViewModel
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(viewModel.groupedExpenses, id: \.key) { group in
-                    Section(header: Text(group.key, style: .date)) {
-                        ForEach(group.values) { expense in
-                            ExpenseCell(expense: expense)
+        TabView(selection: $selectedTab) {
+            // Expenses list tab
+            NavigationStack {
+                List {
+                    ForEach(viewModel.groupedExpenses, id: \.key) { group in
+                        Section(header: Text(group.key, style: .date)) {
+                            ForEach(group.values) { expense in
+                                NavigationLink {
+                                    ExpenseView(expense: expense)
+                                } label: {
+                                    ExpenseCell(expense: expense)
+                                }
                                 .swipeActions(edge: .leading) {
                                     Button {
                                         selectedExpense = expense
@@ -38,70 +45,85 @@ struct ContentView: View {
                                     }
                                     .tint(.blue)
                                 }
-                        }
-                        .onDelete { indexSet in
-                            // Map the indexSet (indices within the section) to the
-                            // actual Expense objects and delete them from the model
-                            let toDelete = indexSet.compactMap { idx in
-                                group.values.indices.contains(idx) ? group.values[idx] : nil
                             }
-                            toDelete.forEach { context.delete($0) }
+                            .onDelete { indexSet in
+                                let toDelete = indexSet.compactMap { idx in
+                                    group.values.indices.contains(idx) ? group.values[idx] : nil
+                                }
+                                toDelete.forEach { context.delete($0) }
+                            }
                         }
                     }
                 }
-            }
-            .navigationTitle("Expenses : \(viewModel.totalFormatted)")
-            .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $isPresentingAdd) {
-                AddExpenseSheet()
-            }
-            // Sheet to edit an existing expense. UpdateExpenseSheet uses @Bindable
-            // so we can pass the model instance directly.
-            .sheet(item: $selectedExpense) { expense in
-                UpdateExpenseSheet(expense: expense)
-            }
-            // CSV export share sheet
-            .sheet(isPresented: $isShowingShare) {
-                if let url = exportURL {
-                    ShareSheet(activityItems: [url])
-                } else {
-                    Text("Unable to prepare export")
+                .navigationTitle("Expenses : \(viewModel.totalFormatted)")
+                .navigationBarTitleDisplayMode(.large)
+                .sheet(isPresented: $isPresentingAdd) {
+                    AddExpenseSheet()
                 }
-            }
-            .toolbar {
-                if !viewModel.isEmpty {
-                    HStack {
-                        Button("Add Expense", systemImage: "plus") {
-                            isPresentingAdd = true
-                        }
-                        Button("Export", systemImage: "square.and.arrow.up") {
-                            if let url = viewModel.createCSV() {
-                                exportURL = url
+                .sheet(item: $selectedExpense) { expense in
+                    UpdateExpenseSheet(expense: expense)
+                }
+                .toolbar {
+                    if !viewModel.isEmpty {
+                        HStack {
+                            Button("Add Expense", systemImage: "plus") {
+                                isPresentingAdd = true
+                            }
+                            Button("Export", systemImage: "square.and.arrow.up") {
+                                exportURL = viewModel.createCSV()
                                 isShowingShare = true
                             }
                         }
                     }
                 }
-            }
-            .overlay {
-                if viewModel.isEmpty {
-                    EmptyExpensesView {
-                        isPresentingAdd = true
+                .overlay {
+                    if viewModel.isEmpty {
+                        EmptyExpensesView {
+                            isPresentingAdd = true
+                        }
+                        .offset(y: -60)
                     }
-                    .offset(y: -60)
+                }
+                .onAppear {
+                    viewModel.update(expenses: expenses)
+                }
+                .onChange(of: expenses) { _, newValue in
+                    viewModel.update(expenses: newValue)
                 }
             }
-            // Keep the ViewModel in sync with SwiftData query results
-            .onAppear {
-                viewModel.update(expenses: expenses)
+            .tabItem {
+                Label("Expenses", systemImage: "sterlingsign.circle")
             }
-            .onChange(of: expenses) { _, newValue in
-                viewModel.update(expenses: newValue)
+            .tag(0)
+
+            // Chart tab
+            NavigationStack {
+                ExpensesChartView(slices: viewModel.chartSlices)
+                    .navigationTitle("Chart")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        // Allow export from chart tab as well
+                        if !viewModel.isEmpty {
+                            Button("Export", systemImage: "square.and.arrow.up") {
+                                exportURL = viewModel.createCSV()
+                                isShowingShare = true
+                            }
+                        }
+                    }
+            }
+            .tabItem {
+                Label("Chart", systemImage: "chart.pie.fill")
+            }
+            .tag(1)
+        }
+        // Share sheet for CSV
+        .sheet(isPresented: $isShowingShare) {
+            if let url = exportURL {
+                ShareSheet(activityItems: [url])
+            } else {
+                Text("Unable to prepare export")
             }
         }
-
-        ExpensesChartView(slices: viewModel.chartSlices)
-            .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 120)
     }
 }
 
