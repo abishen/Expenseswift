@@ -21,19 +21,12 @@ struct ContentView: View {
     @State private var exportURL: URL?
     
 
-    private var groupedExpenses: [(key: Date, values: [Expense])] {
-        let groups = Dictionary(grouping: expenses) { expense in
-            Calendar.current.startOfDay(for: expense.date)
-        }
-        return groups
-            .map { (key: $0.key, values: $0.value) }
-            .sorted { $0.key > $1.key }
-    }
+    // Grouping is now handled by the ViewModel
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(groupedExpenses, id: \.key) { group in
+                ForEach(viewModel.groupedExpenses, id: \.key) { group in
                     Section(header: Text(group.key, style: .date)) {
                         ForEach(group.values) { expense in
                             ExpenseCell(expense: expense)
@@ -82,7 +75,7 @@ struct ContentView: View {
                             isPresentingAdd = true
                         }
                         Button("Export", systemImage: "square.and.arrow.up") {
-                            if let url = createCSV() {
+                            if let url = viewModel.createCSV() {
                                 exportURL = url
                                 isShowingShare = true
                             }
@@ -113,34 +106,7 @@ struct ContentView: View {
 }
 
 // MARK: - CSV export
-extension ContentView {
-    private func createCSV() -> URL? {
-        let fm = FileManager.default
-        let tmpDir = fm.temporaryDirectory
-        let fileURL = tmpDir.appendingPathComponent("expenses_export_\(Int(Date().timeIntervalSince1970)).csv")
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-
-        var csv = "Date,Name,Amount\n"
-        for expense in expenses {
-            let date = dateFormatter.string(from: expense.date)
-            let name = expense.name.replacingOccurrences(of: "\"", with: "\"\"")
-            let amount = String(format: "%.2f", expense.value)
-            // Escape name with quotes if it contains comma
-            let safeName = name.contains(",") ? "\"\(name)\"" : name
-            csv += "\(date),\(safeName),\(amount)\n"
-        }
-
-        do {
-            try csv.write(to: fileURL, atomically: true, encoding: .utf8)
-            return fileURL
-        } catch {
-            print("Failed to write CSV: \(error)")
-            return nil
-        }
-    }
-}
+// CSV export is implemented in the ViewModel (MVVM)
 
 private struct ExpensesChartView: View {
     let slices: [(name: String, value: Double)]
